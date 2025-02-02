@@ -1,8 +1,11 @@
 ### <div align="center">Sistema de Cofre com Autenticação de 4 dígitos</div>  
-  
 
-- Projeto desenvolvido em C com uso da placa [BitDogLab](https://github.com/BitDogLab/BitDogLab).  
+
+- Desenvolvido em C com uso da placa [BitDogLab](https://github.com/BitDogLab/BitDogLab).  
+
   
+- O projeto a seguir busca simular o funcionamento de um cofre com autenticação de quatro dígitos, usando algumas funcionalidades da placa BitDogLab como os dois botões, a matriz de LEDs e o display OLED.
+
 
 - Desenvolvido para fim de estudos no projeto Embarcatech - IFRN.
 
