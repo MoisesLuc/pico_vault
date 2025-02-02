@@ -38,10 +38,10 @@ pico_sdk_init()
 add_executable(vault
     vault.c
     inc/ssd1306_i2c.c
-    )
+)
 
-# pull in common dependencies
-target_link_libraries(vault pico_stdlib)
+# Generate PIO header
+pico_generate_pio_header(vault ${CMAKE_CURRENT_LIST_DIR}/ws2818b.pio)
 
 # Modify the below lines to enable/disable output over UART/USB
 pico_enable_stdio_uart(vault 0)
@@ -49,11 +49,18 @@ pico_enable_stdio_usb(vault 1)
 
 # Add the standard library to the build
 target_link_libraries(vault
-        pico_stdlib)
+        pico_stdlib
+)
 
 # Add the standard include files to the build
 target_include_directories(vault PRIVATE
   ${CMAKE_CURRENT_LIST_DIR}
+)
+
+# Add any user requested libraries
+target_link_libraries(vault 
+        hardware_pio
+        hardware_clocks
 )
 
 if (PICO_CYW43_SUPPORTED)

@@ -6,9 +6,13 @@
 #include "pico/binary_info.h"
 #include "inc/ssd1306.h"
 #include "hardware/i2c.h"
+#include "ws2818b.pio.h"
 
 #define BTN_A_PIN 5
 #define BTN_B_PIN 6
+// Definição do número de LEDs e pino.
+#define LED_COUNT 25
+#define LED_PIN 7
 
 const uint I2C_SDA = 14;
 const uint I2C_SCL = 15;
@@ -27,6 +31,87 @@ struct render_area frame_area = {
 };
 
 uint8_t ssd[ssd1306_buffer_length];
+
+
+/**
+ * INICIALIZAÇÃO 
+ * MATRIZ DE LEDS
+ */
+
+// Definição de pixel GRB
+struct pixel_t {
+    uint8_t G, R, B; // Três valores de 8-bits compõem um pixel.
+};
+typedef struct pixel_t pixel_t;
+typedef pixel_t npLED_t; // Mudança de nome de "struct pixel_t" para "npLED_t" por clareza.
+
+// Declaração do buffer de pixels que formam a matriz.
+npLED_t leds[LED_COUNT];
+
+// Variáveis para uso da máquina PIO.
+PIO np_pio;
+uint sm;
+
+/**
+* Inicializa a máquina PIO para controle da matriz de LEDs.
+*/
+void npInit(uint pin) {
+    // Cria programa PIO.
+    uint offset = pio_add_program(pio0, &ws2818b_program);
+    np_pio = pio0;
+
+    // Toma posse de uma máquina PIO.
+    sm = pio_claim_unused_sm(np_pio, false);
+    if (sm < 0) {
+        np_pio = pio1;
+        sm = pio_claim_unused_sm(np_pio, true); // Se nenhuma máquina estiver livre, panic!
+    }
+
+    // Inicia programa na máquina PIO obtida.
+    ws2818b_program_init(np_pio, sm, offset, pin, 800000.f);
+
+    // Limpa buffer de pixels.
+    for (uint i = 0; i < LED_COUNT; ++i) {
+        leds[i].R = 0;
+        leds[i].G = 0;
+        leds[i].B = 0;
+    }
+}
+
+/**
+* Atribui uma cor RGB a um LED.
+*/
+void npSetLED(const uint index, const uint8_t r, const uint8_t g, const uint8_t b) {
+    leds[index].R = r;
+    leds[index].G = g;
+    leds[index].B = b;
+}
+
+/**
+* Limpa o buffer de pixels.
+*/
+void npClear() {
+    for (uint i = 0; i < LED_COUNT; ++i)
+        npSetLED(i, 0, 0, 0);
+}
+
+/**
+* Escreve os dados do buffer nos LEDs.
+*/
+void npWrite() {
+    // Escreve cada dado de 8-bits dos pixels em sequência no buffer da máquina PIO.
+    for (uint i = 0; i < LED_COUNT; ++i) {
+    pio_sm_put_blocking(np_pio, sm, leds[i].G);
+    pio_sm_put_blocking(np_pio, sm, leds[i].R);
+    pio_sm_put_blocking(np_pio, sm, leds[i].B);
+    }
+}
+
+/**
+ * FIM DA
+ * INICIALIZAÇÃO 
+ * MATRIZ DE LEDS
+ */
 
 
 
@@ -51,6 +136,18 @@ void display_code(int pnt, int* temp) {
     }
 }
 
+void draw_led(int* target, int R, int G) {      // Função que liga a matriz de LED, recebendo os LEDs a serem ativos e qual cor utilizada
+    npClear();
+
+    printf("%d", count_of(&target));
+
+    for (int i = 0; i < 11; i++) {
+        npSetLED(target[i], R, G, 0);
+        npWrite();
+        sleep_ms(50);
+    }
+}
+
 void display_message(int status) {
     char* text[] = {"SENHA", "CORRETA", "ERRADA"};
 
@@ -65,9 +162,13 @@ void display_message(int status) {
     if (status == 1) {
         ssd1306_draw_string(ssd, 40, 32, text[1]);
         render_on_display(ssd, &frame_area);
+        int target[] = {1, 2, 3, 6, 7, 8, 13, 16, 22, 18, -1};      // LEDs a serem ativos, na cor verde
+        draw_led(target, 0, 255);
     } else {
         ssd1306_draw_string(ssd, 40, 32, text[2]);
         render_on_display(ssd, &frame_area);
+        int target[] = {1, 2, 3, 6, 7, 8, 11, 13, 16, 22, 18};      // LEDs a serem ativos, na cor vermelha
+        draw_led(target, 255, 0);
     }
 
     sleep_ms(3000);
@@ -110,7 +211,7 @@ int auth(int* temp) {      // Compara o código atual (temporário) com o códig
 
 int main() {
     stdio_init_all();
-    // INICIANDO BOTÕES
+    // Inicializando BOTÕES
     gpio_init(BTN_A_PIN);
     gpio_set_dir(BTN_A_PIN, GPIO_IN);
     gpio_pull_up(BTN_A_PIN);
@@ -127,8 +228,11 @@ int main() {
 
     // Processo de inicialização completo do OLED SSD1306
     ssd1306_init();
-
     calculate_render_area_buffer_length(&frame_area);
+
+    // Inicializando matriz de LEDs NeoPixel
+    npInit(LED_PIN);
+    npClear();
 
     
     int temp[4] = {0, 0, 0, 0};     // Array temporário, contendo o código inserido pelo usuário
