@@ -136,15 +136,11 @@ void display_code(int pnt, int* temp) {
     }
 }
 
-void draw_led(int* target, int R, int G) {      // Função que liga a matriz de LED, recebendo os LEDs a serem ativos e qual cor utilizada
-    npClear();
-
-    printf("%d", count_of(&target));
-
+void draw_led(int* target, int R, int G) { // Função que liga a matriz de LED, recebendo os LEDs a serem ativos e qual cor utilizada
     for (int i = 0; i < 11; i++) {
         npSetLED(target[i], R, G, 0);
         npWrite();
-        sleep_ms(50);
+        sleep_ms(10);
     }
 }
 
@@ -162,19 +158,19 @@ void display_message(int status) {
     if (status == 1) {
         ssd1306_draw_string(ssd, 40, 32, text[1]);
         render_on_display(ssd, &frame_area);
-        int target[] = {1, 2, 3, 6, 7, 8, 13, 16, 22, 18, -1};      // LEDs a serem ativos, na cor verde
+        int target[] = {1, 2, 3, 6, 7, 8, 13, 16, 22, 18, -1}; // LEDs a serem ativos, na cor verde
         draw_led(target, 0, 255);
     } else {
         ssd1306_draw_string(ssd, 40, 32, text[2]);
         render_on_display(ssd, &frame_area);
-        int target[] = {1, 2, 3, 6, 7, 8, 11, 13, 16, 22, 18};      // LEDs a serem ativos, na cor vermelha
+        int target[] = {1, 2, 3, 6, 7, 8, 11, 13, 16, 22, 18}; // LEDs a serem ativos, na cor vermelha
         draw_led(target, 255, 0);
     }
 
     sleep_ms(3000);
 }
 
-int increase_value(int value) {     // Função para incrementar o valor na posição indicada pelo apontador
+int increase_value(int value) { // Função para incrementar o valor na posição indicada pelo apontador
     if (value < 9) {
         value++;
     } else {
@@ -184,7 +180,7 @@ int increase_value(int value) {     // Função para incrementar o valor na posi
     return value;
 }
 
-int move_pointer(int pnt) {     // Função para mover o apontador (para a direita)
+int move_pointer(int pnt) { // Função para mover o apontador (para a direita)
     if (pnt < 3) {
         pnt++;
     } else {
@@ -194,16 +190,16 @@ int move_pointer(int pnt) {     // Função para mover o apontador (para a direi
     return pnt;
 }
 
-int auth(int* temp) {      // Compara o código atual (temporário) com o código de abertura do cofre
-    int vault_code[4] = {4, 3, 2, 1};
+int auth(int* temp) { // Compara o código atual (temporário) com o código de abertura do cofre
+    int vault_code[4] = {4, 3, 2, 1}; // Senha de teste, alterar a vontade
 
     for (int i = 0; i < count_of(vault_code); i++) {
         if (temp[i] != vault_code[i]) {
-            return 0;       // Código errado
+            return 0; // Código errado
         }
     }
 
-    return 1;       // Código certo
+    return 1; // Código certo
 }
 
 
@@ -235,10 +231,10 @@ int main() {
     npClear();
 
     
-    int temp[4] = {0, 0, 0, 0};     // Array temporário, contendo o código inserido pelo usuário
-    int pointer = 0;    // Apontador para a posição dos dígitos
-    int value = 0;      // Valor do dígito
-    int status = 0;     // Verifica se o código inserido está correto
+    int temp[4] = {0, 0, 0, 0}; // Array temporário, contendo o código inserido pelo usuário
+    int pointer = 0; // Apontador para a posição dos dígitos
+    int value = 0; // Valor do dígito
+    int status = 0; // Verifica se o código inserido está correto
 
     // Verificaca se os botões foram pressionados e logo depois soltos
     int release_A = 1;      
@@ -252,23 +248,25 @@ int main() {
         A_state = gpio_get(BTN_A_PIN);
         B_state = gpio_get(BTN_B_PIN);
 
-        if (A_state == 1 && release_A == 0) {     // Botão A apertado e levantado, incrementa o valor na posição do apontador
+        if (A_state == 1 && release_A == 0) { // Botão A apertado e levantado, incrementa o valor na posição do apontador
             value = temp[pointer];
             temp[pointer] = increase_value(value);
             display_code(pointer, temp);
-        } else if (B_state == 1 && release_B == 0) {     // Botão B apertado e levantado, incrementa o valor do apontador até o limite de 3
+        } else if (B_state == 1 && release_B == 0) { // Botão B apertado e levantado, incrementa o valor do apontador até o limite de 3
             pointer = move_pointer(pointer);
             display_code(pointer, temp);
-        } else if (A_state == 0 && B_state == 0) {      // Se A e B forem pressionados simultaneamente, verifica se o código inserido corresponde ao de abertura do cofre
+        } else if (A_state == 0 && B_state == 0) { // Se A e B forem pressionados simultaneamente, verifica se o código inserido corresponde ao de abertura do cofre
             status = auth(temp);
             display_message(status);
-            memset(temp, 0, sizeof(temp));    // Define o array do código temporário para [0, 0, 0, 0] novamente
+            memset(temp, 0, sizeof(temp)); // Define o array do código temporário para [0, 0, 0, 0] novamente
+            npClear(); // Resetar matriz de LED
+            npWrite();
         }
 
         release_A = A_state;
         release_B = B_state;
 
-        sleep_ms(20);       // Delay para evitar bouncing
+        sleep_ms(20); // Delay para evitar bouncing
     }
 
     return 0;
